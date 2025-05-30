@@ -304,9 +304,12 @@ if __name__ == '__main__':
         os.makedirs('static')
     
     print("서버 시작 중...")
-    # Render 배포용 포트 설정 - 포트 0으로 설정 (시스템 자동 할당)
-    port = int(os.environ.get('PORT', 0))
+    # Render 배포용 포트 설정 - 환경 변수 PORT 사용, 없으면 5000
+    port = int(os.environ.get('PORT', 5000))
     debug_mode = os.environ.get('FLASK_ENV') != 'production'
+    
+    print(f"포트: {port}")
+    print(f"디버그 모드: {debug_mode}")
     
     if debug_mode:
         print("브라우저에서 http://localhost:5000 으로 접속하세요.")
