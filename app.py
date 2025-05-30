@@ -208,8 +208,8 @@ if __name__ == '__main__':
         os.makedirs('static')
     
     print("서버 시작 중...")
-    # Render 배포용 포트 설정
-    port = int(os.environ.get('PORT', 5000))
+    # Render 배포용 포트 설정 - 포트 0으로 설정 (시스템 자동 할당)
+    port = int(os.environ.get('PORT', 0))
     debug_mode = os.environ.get('FLASK_ENV') != 'production'
     
     if debug_mode:
