@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vincit - 담당자별 전날 문의현황</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .calligraphy {
+            font-family: 'Georgia', 'Times New Roman', '맑은 고딕', serif;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+    <div class="min-h-screen bg-gray-50 p-6">
+        <div class="max-w-7xl mx-auto">
+            <!-- 헤더 -->
+            <div class="mb-8">
+                <!-- Vincit 로고 (왼쪽 상단) -->
+                <div class="flex items-baseline mb-6">
+                    <h1 class="text-4xl font-bold text-gray-900">Vincit</h1>
+                    <span class="ml-2 text-sm text-gray-500 italic">('Amor Vincit Omnia')</span>
+                </div>
+                
+                <!-- 명언과 인사말 (중앙) -->
+                <div class="text-center">
+                    <div class="calligraphy text-xl text-gray-800 mb-3 leading-relaxed">
+                        비관론자는 모든 기회에서 어려움을 찾아내고<br>
+                        낙관론자는 모든 어려움에서 기회를 찾아낸다
+                    </div>
+                    <div class="text-lg text-blue-600 font-semibold">
+                        좋은아침입니다! ☀️ 태일팀장이 가장 빛나는 하루를 보내세요 믿습니다
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-6 h-[1200px]">
+                <!-- 왼쪽: 담당자 목록 -->
+                <div class="col-span-3 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 text-center">담당자</h2>
+                    
+                    <!-- 헤더 라벨 -->
+                    <div class="flex justify-between items-center px-4 py-3 mb-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                            <span class="text-sm font-semibold text-blue-700">담당자</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-sm font-semibold text-indigo-700">문의/ 매물</span>
+                            <div class="w-2 h-2 bg-indigo-500 rounded-full ml-2"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3" id="manager-list">
+                        <!-- 담당자 목록이 여기에 동적으로 추가됩니다 -->
+                    </div>
+                </div>
+
+                <!-- 중간: 담당매물 -->
+                <div class="col-span-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 text-center">담당매물</h2>
+                    
+                    <!-- 필터링 버튼 -->
+                    <div class="flex space-x-2 mb-4">
+                        <button id="filter-inquiries" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                            문의수순
+                        </button>
+                        <button id="filter-views" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">
+                            조회수순
+                        </button>
+                        <button id="filter-upload-date" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">
+                            올린날짜순
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 gap-3 max-h-[1000px] overflow-y-auto scrollbar-hide" id="properties-list">
+                        <!-- 담당매물 목록이 여기에 동적으로 추가됩니다 -->
+                    </div>
+                </div>
+
+                <!-- 오른쪽: 통계 및 순위 -->
+                <div class="col-span-3 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <!-- 제거된 매물 알림 -->
+                    <div id="removed-properties-section" class="mb-6 hidden">
+                        <h3 class="text-lg font-semibold text-red-600 mb-3">🚨 제거된 지울 매물</h3>
+                        <div id="removed-properties-list" class="space-y-2 max-h-32 overflow-y-auto">
+                            <!-- 제거된 매물 목록이 여기에 표시됩니다 -->
+                        </div>
+                        <button onclick="clearRemovedProperties()" class="mt-2 text-xs text-gray-500 hover:text-gray-700">
+                            알림 지우기
+                        </button>
+                    </div>
+                    
+                    <!-- 상단 통계 -->
+                    <div class="mb-6">
+                        <div class="grid grid-cols-1 gap-3">
+                            <div class="text-center p-3 bg-blue-50 rounded-lg">
+                                <div class="text-xl font-bold text-blue-600" id="total-inquiries">0</div>
+                                <div class="text-sm text-gray-600">vincit 총문의</div>
+                            </div>
+                            <div class="text-center p-3 bg-green-50 rounded-lg">
+                                <div class="text-xl font-bold text-green-600" id="average-views">0</div>
+                                <div class="text-sm text-gray-600">평균 조회수</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h2 class="text-lg font-semibold text-gray-800 mb-6 text-center">순위</h2>
+                    
+                    <div class="space-y-4" id="ranking-list">
+                        <!-- 순위 목록이 여기에 동적으로 추가됩니다 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 로딩 스피너 -->
+    <div id="loading" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p class="mt-2 text-gray-600">데이터를 불러오는 중...</p>
+        </div>
+    </div>
+
+    <script>
+        let managerData = [];
+        let selectedManager = null;
+        let currentFilter = 'inquiries'; // 'inquiries', 'views', 'uploadDate'
+        
+        // 매물 추적 관련 함수들
+        function getTodayKey() {
+            return new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식
+        }
+        
+        function getTrackedProperties() {
+            const today = getTodayKey();
+            const stored = localStorage.getItem(`trackedProperties_${today}`);
+            return stored ? JSON.parse(stored) : {};
+        }
+        
+        function saveTrackedProperties(trackedProperties) {
+            const today = getTodayKey();
+            localStorage.setItem(`trackedProperties_${today}`, JSON.stringify(trackedProperties));
+        }
+        
+        function isPropertyTracked(propertyId) {
+            const tracked = getTrackedProperties();
+            return tracked.hasOwnProperty(propertyId);
+        }
+        
+        function trackProperty(propertyId, propertyData) {
+            const tracked = getTrackedProperties();
+            tracked[propertyId] = {
+                ...propertyData,
+                trackedDate: getTodayKey()
+            };
+            saveTrackedProperties(tracked);
+        }
+        
+        function untrackProperty(propertyId) {
+            const tracked = getTrackedProperties();
+            delete tracked[propertyId];
+            saveTrackedProperties(tracked);
+        }
+        
+        function checkRemovedProperties() {
+            // 어제 추적했던 매물들 확인
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayKey = yesterday.toISOString().split('T')[0];
+            
+            const yesterdayTracked = localStorage.getItem(`trackedProperties_${yesterdayKey}`);
+            if (!yesterdayTracked) return;
+            
+            const yesterdayProperties = JSON.parse(yesterdayTracked);
+            const currentPropertyIds = new Set();
+            
+            // 현재 모든 매물 ID 수집
+            managerData.forEach(manager => {
+                if (manager.properties) {
+                    manager.properties.forEach(property => {
+                        currentPropertyIds.add(property.propertyId);
+                    });
+                }
+            });
+            
+            // 제거된 매물 찾기
+            const removedProperties = [];
+            Object.keys(yesterdayProperties).forEach(propertyId => {
+                if (!currentPropertyIds.has(propertyId)) {
+                    removedProperties.push(yesterdayProperties[propertyId]);
+                }
+            });
+            
+            // 제거된 매물 표시
+            if (removedProperties.length > 0) {
+                displayRemovedProperties(removedProperties);
+            }
+        }
+        
+        function displayRemovedProperties(removedProperties) {
+            const section = document.getElementById('removed-properties-section');
+            const list = document.getElementById('removed-properties-list');
+            
+            list.innerHTML = '';
+            removedProperties.forEach(property => {
+                const item = document.createElement('div');
+                item.className = 'p-2 bg-red-50 border border-red-200 rounded text-xs';
+                item.innerHTML = `
+                    <div class="font-semibold text-red-700">${property.managerName} - ${property.propertyId}</div>
+                    <div class="text-red-600">${property.address}</div>
+                `;
+                list.appendChild(item);
+            });
+            
+            section.classList.remove('hidden');
+        }
+        
+        function clearRemovedProperties() {
+            document.getElementById('removed-properties-section').classList.add('hidden');
+        }
+
+        // 데이터 로드
+        async function loadData() {
+            try {
+                const response = await fetch('/api/data');
+                const data = await response.json();
+                managerData = data;
+                
+                if (managerData.length > 0) {
+                    selectedManager = managerData[0];
+                    renderDashboard();
+                    checkRemovedProperties(); // 제거된 매물 확인
+                } else {
+                    showError('데이터가 없습니다.');
+                }
+            } catch (error) {
+                console.error('데이터 로드 오류:', error);
+                showError('데이터를 불러오는 중 오류가 발생했습니다.');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // 에러 메시지 표시
+        function showError(message) {
+            document.getElementById('loading').innerHTML = `
+                <div class="bg-white p-6 rounded-lg">
+                    <div class="text-red-600 text-center">
+                        <p class="text-lg font-semibold">오류</p>
+                        <p class="mt-2">${message}</p>
+                        <button onclick="location.reload()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                            다시 시도
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 대시보드 렌더링
+        function renderDashboard() {
+            renderManagerList();
+            renderProperties();
+            renderRanking();
+            renderStatistics();
+        }
+
+        // 담당자 목록 렌더링
+        function renderManagerList() {
+            const managerList = document.getElementById('manager-list');
+            managerList.innerHTML = '';
+
+            managerData.forEach(manager => {
+                const isSelected = selectedManager && selectedManager.name === manager.name;
+                const propertyCount = manager.properties ? manager.properties.length : 0;
+                const managerElement = document.createElement('div');
+                managerElement.className = `px-3 py-2 rounded-lg border-2 cursor-pointer transition-all ${
+                    isSelected
+                        ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-blue-500 shadow-lg'
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:shadow-md'
+                }`;
+                
+                managerElement.innerHTML = `
+                    <div class="flex flex-col space-y-1">
+                        <div class="flex justify-between items-center">
+                            <span class="font-semibold">${manager.name}</span>
+                            ${isSelected ? 
+                                '<div class="w-2 h-2 bg-white rounded-full"></div>' : 
+                                '<div class="w-2 h-2 bg-blue-500 rounded-full"></div>'
+                            }
+                        </div>
+                        <div class="text-sm ${isSelected ? 'text-blue-100' : 'text-gray-600'}">
+                            <div class="mb-1">
+                                문의: <span class="font-bold ${isSelected ? 'text-white' : 'text-blue-600'}">${manager.totalInquiries || 0}</span> / 
+                                <span class="font-bold ${isSelected ? 'text-white' : 'text-red-600'}">${manager.yesterdayInquiries || 0}</span> 
+                                <span class="text-gray-400">(어제)</span>
+                            </div>
+                            <div>
+                                매물: <span class="font-bold ${isSelected ? 'text-white' : 'text-indigo-600'}">${propertyCount}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                managerElement.addEventListener('click', () => {
+                    selectedManager = manager;
+                    renderDashboard();
+                });
+                
+                managerList.appendChild(managerElement);
+            });
+        }
+
+        // 담당매물 렌더링
+        function renderProperties() {
+            const propertiesList = document.getElementById('properties-list');
+            propertiesList.innerHTML = '';
+
+            if (!selectedManager || !selectedManager.properties) return;
+
+            // 현재 필터에 따라 정렬
+            let sortedProperties;
+            if (currentFilter === 'inquiries') {
+                sortedProperties = [...selectedManager.properties].sort((a, b) => b.inquiries - a.inquiries);
+            } else if (currentFilter === 'views') {
+                sortedProperties = [...selectedManager.properties].sort((a, b) => b.dailyViews - a.dailyViews);
+            } else if (currentFilter === 'uploadDate') {
+                sortedProperties = [...selectedManager.properties].sort((a, b) => a.uploadDays - b.uploadDays);
+            }
+
+            sortedProperties.forEach(property => {
+                const propertyElement = document.createElement('div');
+                propertyElement.className = 'border border-gray-200 rounded-lg p-4';
+                
+                propertyElement.innerHTML = `
+                    <div class="grid grid-cols-5 gap-4 items-center">
+                        <div class="text-center">
+                            <div class="text-xs text-gray-500 mb-1">매물번호</div>
+                            <div class="font-medium text-blue-600">${property.propertyId}</div>
+                        </div>
+                        <div class="col-span-2">
+                            <div class="text-xs text-gray-500 mb-1">주소</div>
+                            <div class="text-sm font-medium">${property.address}</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-xs text-gray-500 mb-1">금액</div>
+                            <div class="font-bold text-green-600">${property.amount}</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-xs text-gray-500 mb-1">조회수</div>
+                            <div class="font-bold text-purple-600">${property.dailyViews}회</div>
+                            <div class="text-xs text-gray-400 mt-1">올린날짜 ${property.uploadDays}일</div>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-center">
+                        <div class="flex items-center justify-center space-x-3">
+                            <span class="bg-red-500 text-white text-xs px-3 py-1 rounded-full">
+                                문의 ${property.inquiries}건
+                            </span>
+                            <div class="flex items-center">
+                                <input type="checkbox" 
+                                       id="track-${property.propertyId}" 
+                                       class="property-tracker w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                       data-property-id="${property.propertyId}"
+                                       data-property-address="${property.address}"
+                                       data-manager-name="${selectedManager.name}"
+                                       ${isPropertyTracked(property.propertyId) ? 'checked' : ''}>
+                                <label for="track-${property.propertyId}" class="ml-1 text-xs text-gray-600">지울매물</label>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                propertiesList.appendChild(propertyElement);
+            });
+            
+            // 체크박스 이벤트 리스너 추가
+            document.querySelectorAll('.property-tracker').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const propertyId = this.dataset.propertyId;
+                    const propertyAddress = this.dataset.propertyAddress;
+                    const managerName = this.dataset.managerName;
+                    
+                    if (this.checked) {
+                        trackProperty(propertyId, {
+                            propertyId: propertyId,
+                            address: propertyAddress,
+                            managerName: managerName
+                        });
+                    } else {
+                        untrackProperty(propertyId);
+                    }
+                });
+            });
+        }
+
+        // 순위 렌더링
+        function renderRanking() {
+            const rankingList = document.getElementById('ranking-list');
+            rankingList.innerHTML = '';
+
+            const rankedManagers = [...managerData].sort((a, b) => (b.totalInquiries || 0) - (a.totalInquiries || 0));
+
+            rankedManagers.forEach((manager, index) => {
+                const rankElement = document.createElement('div');
+                rankElement.className = 'flex items-center justify-between p-3 rounded-lg border border-gray-200';
+                
+                const rankBadgeClass = index === 0 ? 'bg-yellow-400 text-white' :
+                                     index === 1 ? 'bg-gray-400 text-white' :
+                                     index === 2 ? 'bg-orange-400 text-white' :
+                                     'bg-gray-100 text-gray-600';
+                
+                rankElement.innerHTML = `
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mr-3 ${rankBadgeClass}">
+                            ${index + 1}
+                        </div>
+                        <span class="font-medium text-gray-900">${manager.name}</span>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-lg font-bold text-blue-600">${manager.totalInquiries || 0}</div>
+                        <div class="text-xs text-gray-500">건</div>
+                    </div>
+                `;
+                
+                rankingList.appendChild(rankElement);
+            });
+        }
+
+        // 통계 렌더링
+        function renderStatistics() {
+            const totalInquiries = managerData.reduce((sum, manager) => sum + (manager.totalInquiries || 0), 0);
+            
+            // 평균 조회수 계산
+            let totalViews = 0;
+            let totalProperties = 0;
+            managerData.forEach(manager => {
+                if (manager.properties) {
+                    manager.properties.forEach(property => {
+                        totalViews += property.dailyViews;
+                        totalProperties++;
+                    });
+                }
+            });
+            const averageViews = totalProperties > 0 ? Math.round(totalViews / totalProperties) : 0;
+
+            document.getElementById('total-inquiries').textContent = totalInquiries;
+            document.getElementById('average-views').textContent = averageViews;
+        }
+
+        // 필터 버튼 업데이트
+        function updateFilterButtons() {
+            const inquiriesBtn = document.getElementById('filter-inquiries');
+            const viewsBtn = document.getElementById('filter-views');
+            const uploadDateBtn = document.getElementById('filter-upload-date');
+            
+            // 모든 버튼을 기본 상태로 초기화
+            inquiriesBtn.className = 'px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors';
+            viewsBtn.className = 'px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors';
+            uploadDateBtn.className = 'px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors';
+            
+            // 현재 필터에 따라 활성화
+            if (currentFilter === 'inquiries') {
+                inquiriesBtn.className = 'px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors';
+            } else if (currentFilter === 'views') {
+                viewsBtn.className = 'px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors';
+            } else if (currentFilter === 'uploadDate') {
+                uploadDateBtn.className = 'px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors';
+            }
+        }
+
+        // 페이지 로드 시 실행
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            
+            // 필터 버튼 이벤트 리스너
+            document.getElementById('filter-inquiries').addEventListener('click', () => {
+                currentFilter = 'inquiries';
+                updateFilterButtons();
+                renderProperties();
+            });
+            
+            document.getElementById('filter-views').addEventListener('click', () => {
+                currentFilter = 'views';
+                updateFilterButtons();
+                renderProperties();
+            });
+            
+            document.getElementById('filter-upload-date').addEventListener('click', () => {
+                currentFilter = 'uploadDate';
+                updateFilterButtons();
+                renderProperties();
+            });
+        });
+    </script>
+</body>
+</html> 
