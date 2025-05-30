@@ -306,10 +306,17 @@ if __name__ == '__main__':
     print("서버 시작 중...")
     # Render 배포용 포트 설정 - 환경 변수 PORT 사용, 없으면 5000
     port = int(os.environ.get('PORT', 5000))
-    debug_mode = os.environ.get('FLASK_ENV') != 'production'
+    
+    # 환경 변수 확인
+    flask_env = os.environ.get('FLASK_ENV', 'development')
+    is_production = flask_env == 'production' or os.environ.get('RENDER') is not None
+    debug_mode = not is_production
     
     print(f"포트: {port}")
+    print(f"FLASK_ENV: {flask_env}")
+    print(f"RENDER 환경: {os.environ.get('RENDER', 'None')}")
     print(f"디버그 모드: {debug_mode}")
+    print(f"프로덕션 모드: {is_production}")
     
     if debug_mode:
         print("브라우저에서 http://localhost:5000 으로 접속하세요.")
