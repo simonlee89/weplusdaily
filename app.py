@@ -18,39 +18,79 @@ ALLOWED_MANAGERS = ['유현준', '백은주', '윤진식', '문수인', '김혜�
 def get_google_sheet_data():
     """구글 시트에서 데이터를 가져오는 함수"""
     try:
+        print("구글 시트 데이터 가져오기 시작...")
+        
         # 서비스 계정 인증
         scope = ['https://spreadsheets.google.com/feeds',
                 'https://www.googleapis.com/auth/drive']
         
         # 환경 변수에서 JSON 키 읽기 (Render 배포용)
         service_account_info = os.getenv('GOOGLE_SERVICE_ACCOUNT_JSON')
+        print(f"환경 변수 GOOGLE_SERVICE_ACCOUNT_JSON 존재 여부: {service_account_info is not None}")
+        
         if service_account_info:
-            # JSON 문자열을 딕셔너리로 변환
-            service_account_dict = json.loads(service_account_info)
-            credentials = Credentials.from_service_account_info(
-                service_account_dict, scopes=scope)
+            try:
+                # JSON 문자열을 딕셔너리로 변환
+                service_account_dict = json.loads(service_account_info)
+                print("환경 변수에서 JSON 파싱 성공")
+                credentials = Credentials.from_service_account_info(
+                    service_account_dict, scopes=scope)
+                print("서비스 계정 인증 정보 생성 성공")
+            except json.JSONDecodeError as e:
+                print(f"JSON 파싱 오류: {e}")
+                return []
+            except Exception as e:
+                print(f"서비스 계정 인증 정보 생성 오류: {e}")
+                return []
         else:
             # 로컬 개발용 파일 사용 (fallback)
             local_file = r'C:\Users\1\Desktop\구글서비스키\더탑원이스트 구글서비스키\thetopone-fe6caa586b15.json'
+            print(f"로컬 파일 사용 시도: {local_file}")
             if os.path.exists(local_file):
                 credentials = Credentials.from_service_account_file(local_file, scopes=scope)
+                print("로컬 파일에서 인증 정보 생성 성공")
             else:
                 print("Google 서비스 계정 키를 찾을 수 없습니다.")
+                print("환경 변수 GOOGLE_SERVICE_ACCOUNT_JSON을 설정하거나 로컬 파일을 확인하세요.")
                 return []
         
         # 구글 시트 클라이언트 생성
+        print("구글 시트 클라이언트 생성 중...")
         gc = gspread.authorize(credentials)
+        print("구글 시트 클라이언트 생성 성공")
         
         # 스프레드시트 열기
+        print(f"스프레드시트 열기 시도: {SPREADSHEET_ID}")
         spreadsheet = gc.open_by_key(SPREADSHEET_ID)
+        print("스프레드시트 열기 성공")
+        
+        print(f"워크시트 열기 시도: {SHEET_NAME}")
         worksheet = spreadsheet.worksheet(SHEET_NAME)
+        print("워크시트 열기 성공")
         
         # 모든 데이터 가져오기
+        print("데이터 가져오기 시작...")
         data = worksheet.get_all_records()
+        print(f"데이터 가져오기 성공: {len(data)}개 행")
         
         return data
+    except gspread.exceptions.SpreadsheetNotFound:
+        print(f"스프레드시트를 찾을 수 없습니다. ID: {SPREADSHEET_ID}")
+        print("스프레드시트 ID가 올바른지 확인하고, 서비스 계정에 공유 권한이 있는지 확인하세요.")
+        return []
+    except gspread.exceptions.WorksheetNotFound:
+        print(f"워크시트를 찾을 수 없습니다. 이름: {SHEET_NAME}")
+        print("워크시트 이름이 올바른지 확인하세요.")
+        return []
+    except gspread.exceptions.APIError as e:
+        print(f"구글 시트 API 오류: {e}")
+        print("API 키가 올바른지, API가 활성화되어 있는지 확인하세요.")
+        return []
     except Exception as e:
         print(f"구글 시트 데이터 가져오기 오류: {e}")
+        print(f"오류 타입: {type(e).__name__}")
+        import traceback
+        print(f"상세 오류: {traceback.format_exc()}")
         return []
 
 def process_data(raw_data):
@@ -191,12 +231,68 @@ def index():
 def get_data():
     """API 엔드포인트: 대시보드 데이터 반환"""
     try:
+        print("=== API /api/data 호출됨 ===")
         raw_data = get_google_sheet_data()
+        print(f"원시 데이터 개수: {len(raw_data)}")
+        
+        if not raw_data:
+            print("원시 데이터가 비어있습니다.")
+            return jsonify([])
+        
         processed_data = process_data(raw_data)
+        print(f"처리된 데이터 개수: {len(processed_data)}")
+        
+        if processed_data:
+            print("처리된 담당자 목록:")
+            for manager in processed_data:
+                print(f"  - {manager['name']}: 문의수 {manager['totalInquiries']}, 매물수 {manager['propertyCount']}")
+        
         return jsonify(processed_data)
     except Exception as e:
-        print(f"데이터 처리 오류: {e}")
+        print(f"API 데이터 처리 오류: {e}")
+        import traceback
+        print(f"상세 오류: {traceback.format_exc()}")
         return jsonify([])
+
+@app.route('/api/test')
+def test_connection():
+    """구글 시트 연결 테스트 엔드포인트"""
+    try:
+        print("=== 구글 시트 연결 테스트 시작 ===")
+        
+        # 환경 변수 확인
+        service_account_info = os.getenv('GOOGLE_SERVICE_ACCOUNT_JSON')
+        env_status = "설정됨" if service_account_info else "설정되지 않음"
+        
+        # 기본 연결 테스트
+        raw_data = get_google_sheet_data()
+        
+        result = {
+            "status": "success" if raw_data else "failed",
+            "environment_variable": env_status,
+            "spreadsheet_id": SPREADSHEET_ID,
+            "sheet_name": SHEET_NAME,
+            "data_count": len(raw_data) if raw_data else 0,
+            "allowed_managers": ALLOWED_MANAGERS
+        }
+        
+        if raw_data and len(raw_data) > 0:
+            # 첫 번째 행의 컬럼 정보 추가
+            first_row = raw_data[0]
+            result["columns"] = list(first_row.keys())
+            result["sample_data"] = first_row
+        
+        print(f"테스트 결과: {result}")
+        return jsonify(result)
+        
+    except Exception as e:
+        error_result = {
+            "status": "error",
+            "error_message": str(e),
+            "environment_variable": "설정됨" if os.getenv('GOOGLE_SERVICE_ACCOUNT_JSON') else "설정되지 않음"
+        }
+        print(f"테스트 오류: {error_result}")
+        return jsonify(error_result)
 
 if __name__ == '__main__':
     # templates 폴더 생성
