@@ -222,10 +222,22 @@ def process_data(raw_data):
     
     return manager_data
 
+@app.route('/health')
+def health_check():
+    """헬스체크 엔드포인트"""
+    return jsonify({"status": "healthy", "message": "서버가 정상적으로 실행 중입니다."})
+
 @app.route('/')
 def index():
     """메인 페이지"""
-    return render_template('index.html')
+    try:
+        print("메인 페이지 요청 받음")
+        return render_template('index.html')
+    except Exception as e:
+        print(f"메인 페이지 렌더링 오류: {e}")
+        import traceback
+        print(f"상세 오류: {traceback.format_exc()}")
+        return f"<h1>서버 오류</h1><p>오류: {str(e)}</p>", 500
 
 @app.route('/api/data')
 def get_data():
