@@ -45,6 +45,7 @@ def get_google_sheet_data():
         else:
             # 로컬 개발용 파일 사용 (fallback) - 더 안전한 경로 처리
             possible_paths = [
+                '/etc/secrets/thetopone-fe6caa586b15.json',  # Render Secret Files
                 'service-account.json',  # 프로젝트 루트
                 'keys/service-account.json',  # keys 폴더
                 os.path.expanduser('~/google-service-account.json'),  # 홈 디렉토리
