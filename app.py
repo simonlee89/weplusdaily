@@ -9,7 +9,7 @@ import os
 app = Flask(__name__)
 
 # 구글 시트 설정
-SPREADSHEET_ID = '1I0Vp01nTB2PnXK4QOY-kIdu5JbYFGT5RJ8jXCZ5YXjM'
+SPREADSHEET_ID = os.getenv('GOOGLE_SPREADSHEET_ID', '1I0Vp01nTB2PnXK4QOY-kIdu5JbYFGT5RJ8jXCZ5YXjM')
 SHEET_NAME = '최종데이터'
 
 # 필터링할 담당자 목록
@@ -43,15 +43,32 @@ def get_google_sheet_data():
                 print(f"서비스 계정 인증 정보 생성 오류: {e}")
                 return []
         else:
-            # 로컬 개발용 파일 사용 (fallback)
-            local_file = r'C:\Users\1\Desktop\구글서비스키\더탑원이스트 구글서비스키\thetopone-fe6caa586b15.json'
-            print(f"로컬 파일 사용 시도: {local_file}")
-            if os.path.exists(local_file):
-                credentials = Credentials.from_service_account_file(local_file, scopes=scope)
-                print("로컬 파일에서 인증 정보 생성 성공")
-            else:
+            # 로컬 개발용 파일 사용 (fallback) - 더 안전한 경로 처리
+            possible_paths = [
+                'service-account.json',  # 프로젝트 루트
+                'keys/service-account.json',  # keys 폴더
+                os.path.expanduser('~/google-service-account.json'),  # 홈 디렉토리
+                r'C:\Users\1\Desktop\구글서비스키\더탑원이스트 구글서비스키\thetopone-fe6caa586b15.json'  # 기존 경로 (fallback)
+            ]
+            
+            credentials = None
+            for local_file in possible_paths:
+                print(f"로컬 파일 시도: {local_file}")
+                if os.path.exists(local_file):
+                    try:
+                        credentials = Credentials.from_service_account_file(local_file, scopes=scope)
+                        print(f"로컬 파일에서 인증 정보 생성 성공: {local_file}")
+                        break
+                    except Exception as e:
+                        print(f"파일 {local_file} 로드 실패: {e}")
+                        continue
+            
+            if not credentials:
                 print("Google 서비스 계정 키를 찾을 수 없습니다.")
-                print("환경 변수 GOOGLE_SERVICE_ACCOUNT_JSON을 설정하거나 로컬 파일을 확인하세요.")
+                print("다음 중 하나를 설정하세요:")
+                print("1. 환경 변수 GOOGLE_SERVICE_ACCOUNT_JSON")
+                print("2. 프로젝트 루트에 service-account.json 파일")
+                print("3. keys/service-account.json 파일")
                 return []
         
         # 구글 시트 클라이언트 생성

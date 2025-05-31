@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: vincit-dashboard
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: GOOGLE_SPREADSHEET_ID
+        sync: false  # 수동으로 설정
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+        sync: false  # 수동으로 설정 

@@ -48,6 +48,8 @@ Thumbs.db
 *.json
 thetopone-*.json
 구글서비스키/
+service-account.json
+keys/
 
 # Environment Variables
 .env
@@ -61,5 +63,5 @@ thetopone-*.json
 instance/
 .webassets-cache
 
-# Local development
-일일사이트메인최종.py 
+# Local development files
+일일사이트메인*.py 
