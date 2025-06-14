@@ -46,6 +46,7 @@ Thumbs.db
 
 # Google Service Account Keys (보안상 중요!)
 *.json
+!vercel.json
 thetopone-*.json
 구글서비스키/
 service-account.json
