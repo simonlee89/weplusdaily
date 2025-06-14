@@ -98,3 +98,45 @@ python app.py
 - [ ] 데이터 로드 확인
 - [ ] 모든 기능 테스트
 - [ ] 에러 로그 확인 
+
+## Vercel 배포 가이드
+
+### 1. 환경 변수 설정
+
+Vercel 대시보드에서 다음 환경 변수들을 설정해야 합니다:
+
+#### 필수 환경 변수:
+- `GOOGLE_SERVICE_ACCOUNT_JSON`: 구글 서비스 계정 JSON 키 (전체 JSON 내용을 문자열로)
+- `GOOGLE_SPREADSHEET_ID`: 구글 스프레드시트 ID (기본값: 1I0Vp01nTB2PnXK4QOY-kIdu5JbYFGT5RJ8jXCZ5YXjM)
+
+#### 환경 변수 설정 방법:
+1. Vercel 대시보드 → 프로젝트 선택
+2. Settings → Environment Variables
+3. 다음 변수들을 추가:
+
+```
+Name: GOOGLE_SERVICE_ACCOUNT_JSON
+Value: {"type":"service_account","project_id":"your-project-id",...} (전체 JSON)
+
+Name: GOOGLE_SPREADSHEET_ID  
+Value: 1I0Vp01nTB2PnXK4QOY-kIdu5JbYFGT5RJ8jXCZ5YXjM
+```
+
+### 2. 구글 서비스 계정 설정
+
+1. Google Cloud Console에서 서비스 계정 생성
+2. Google Sheets API 활성화
+3. 서비스 계정 키 다운로드 (JSON 형식)
+4. 구글 스프레드시트에 서비스 계정 이메일 공유 권한 부여
+
+### 3. 문제 해결
+
+#### API에서 빈 배열 [] 반환되는 경우:
+1. `/api/test` 엔드포인트로 연결 상태 확인
+2. 환경 변수 설정 확인
+3. 구글 시트 공유 권한 확인
+4. 허용된 담당자 목록과 실제 데이터 일치 여부 확인
+
+#### 디버깅 방법:
+- Vercel 함수 로그 확인: Vercel 대시보드 → Functions → 로그 확인
+- 테스트 엔드포인트 사용: `https://your-app.vercel.app/api/test` 

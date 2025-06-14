@@ -140,37 +140,77 @@ def process_data(raw_data):
     
     print(f"담당자 컬럼: {manager_col} (E열), 등록번호 컬럼: {property_id_col} (G열), 문의건수 컬럼: {inquiry_count_col} (H열), 올린날짜 컬럼: {upload_date_col} (I열), 어제문의수 컬럼: {yesterday_inquiry_col} (K열)")
     
+    # 담당자 컬럼의 고유값 확인
+    if manager_col in df.columns:
+        unique_managers = df[manager_col].dropna().unique()
+        print(f"시트에서 발견된 담당자들: {list(unique_managers)}")
+        print(f"허용된 담당자 목록: {ALLOWED_MANAGERS}")
+        
+        # 실제 데이터와 허용 목록 비교
+        matching_managers = [m for m in unique_managers if m in ALLOWED_MANAGERS]
+        print(f"매칭되는 담당자: {matching_managers}")
+    else:
+        print(f"담당자 컬럼 '{manager_col}'을 찾을 수 없습니다.")
+        return []
+    
     # 빈 행 제거 및 허용된 담당자만 필터링
-    df = df[df[manager_col].notna() & (df[manager_col] != '') & (df[manager_col] != '0') & df[manager_col].isin(ALLOWED_MANAGERS)]
+    df_filtered = df[df[manager_col].notna() & (df[manager_col] != '') & (df[manager_col] != '0')]
+    print(f"빈 값 제거 후 행 수: {len(df_filtered)}")
+    
+    # 허용된 담당자 필터링 (대소문자 구분 없이)
+    df_allowed = df_filtered[df_filtered[manager_col].isin(ALLOWED_MANAGERS)]
+    print(f"허용된 담당자 필터링 후 행 수: {len(df_allowed)}")
+    
+    if len(df_allowed) == 0:
+        print("허용된 담당자의 데이터가 없습니다. 필터링 조건을 확인하세요.")
+        # 디버깅을 위해 첫 몇 개 담당자 이름 출력
+        if len(df_filtered) > 0:
+            sample_managers = df_filtered[manager_col].head(5).tolist()
+            print(f"시트의 담당자 샘플 (첫 5개): {sample_managers}")
+        return []
     
     # 담당자별 데이터 그룹화
     manager_data = []
     
-    for manager_name in df[manager_col].unique():
-        if pd.isna(manager_name) or manager_name == '' or manager_name == '0' or manager_name not in ALLOWED_MANAGERS:
+    for manager_name in df_allowed[manager_col].unique():
+        if pd.isna(manager_name) or manager_name == '' or manager_name == '0':
             continue
             
-        manager_df = df[df[manager_col] == manager_name]
+        manager_df = df_allowed[df_allowed[manager_col] == manager_name]
+        print(f"담당자 '{manager_name}' 데이터 행 수: {len(manager_df)}")
         
         # 총 문의 수 계산 (H열 문의건수 컬럼의 합)
-        total_inquiries = int(manager_df[inquiry_count_col].fillna(0).sum()) if inquiry_count_col in df.columns else 0
+        total_inquiries = 0
+        if inquiry_count_col in df.columns:
+            inquiry_values = manager_df[inquiry_count_col].fillna(0)
+            # 숫자가 아닌 값들을 0으로 변환
+            numeric_inquiries = pd.to_numeric(inquiry_values, errors='coerce').fillna(0)
+            total_inquiries = int(numeric_inquiries.sum())
         
         # 어제 문의 수 계산 (K열의 합)
-        yesterday_inquiries = int(manager_df[yesterday_inquiry_col].fillna(0).sum()) if yesterday_inquiry_col in df.columns else 0
+        yesterday_inquiries = 0
+        if yesterday_inquiry_col in df.columns:
+            yesterday_values = manager_df[yesterday_inquiry_col].fillna(0)
+            numeric_yesterday = pd.to_numeric(yesterday_values, errors='coerce').fillna(0)
+            yesterday_inquiries = int(numeric_yesterday.sum())
         
         # 총 기간 계산 (올린날짜의 최대값)
         total_days = 0
         if upload_date_col in df.columns:
             try:
-                max_days = manager_df[upload_date_col].fillna(0).max()
-                if pd.notna(max_days) and str(max_days).strip() != '':
-                    total_days = int(float(max_days))
+                upload_values = manager_df[upload_date_col].fillna(0)
+                numeric_days = pd.to_numeric(upload_values, errors='coerce').fillna(0)
+                max_days = numeric_days.max()
+                if pd.notna(max_days) and max_days > 0:
+                    total_days = int(max_days)
             except (ValueError, TypeError):
                 total_days = 0
         
-        # 담당 매물 수 계산 - C열(담당자)의 G열(등록번호) 개수
+        # 담당 매물 수 계산 - G열(등록번호) 개수
         unique_property_ids = manager_df[property_id_col].dropna().unique()
         property_count = len(unique_property_ids)
+        
+        print(f"담당자 '{manager_name}': 총문의수={total_inquiries}, 어제문의수={yesterday_inquiries}, 총기간={total_days}, 매물수={property_count}")
         
         # 담당 매물 목록 - 등록번호 기준으로 중복 제거
         unique_properties = manager_df.drop_duplicates(subset=[property_id_col])
@@ -190,17 +230,19 @@ def process_data(raw_data):
                 # 해당 등록번호의 모든 행에서 문의수 합계 계산
                 property_inquiries = 0
                 if inquiry_count_col in df.columns:
-                    property_inquiries = int(manager_df[manager_df[property_id_col] == row[property_id_col]][inquiry_count_col].fillna(0).sum())
+                    property_inquiry_values = manager_df[manager_df[property_id_col] == row[property_id_col]][inquiry_count_col].fillna(0)
+                    numeric_property_inquiries = pd.to_numeric(property_inquiry_values, errors='coerce').fillna(0)
+                    property_inquiries = int(numeric_property_inquiries.sum())
                 
                 # 일평균 조회수 (해당 등록번호의 첫 번째 값 사용)
                 daily_views = 0
                 if '일평균조회수' in df.columns:
                     try:
                         daily_views_value = row['일평균조회수']
-                        if pd.notna(daily_views_value) and str(daily_views_value).strip() != '':
-                            daily_views = float(daily_views_value)
-                        else:
-                            daily_views = 0
+                        if pd.notna(daily_views_value):
+                            daily_views = float(pd.to_numeric(daily_views_value, errors='coerce'))
+                            if pd.isna(daily_views):
+                                daily_views = 0
                     except (ValueError, TypeError):
                         daily_views = 0
                 
@@ -209,10 +251,10 @@ def process_data(raw_data):
                 if upload_date_col in df.columns:
                     try:
                         upload_date_value = row[upload_date_col]
-                        if pd.notna(upload_date_value) and str(upload_date_value).strip() != '':
-                            upload_days = int(float(upload_date_value))
-                        else:
-                            upload_days = 0
+                        if pd.notna(upload_date_value):
+                            upload_days = int(pd.to_numeric(upload_date_value, errors='coerce'))
+                            if pd.isna(upload_days):
+                                upload_days = 0
                     except (ValueError, TypeError):
                         upload_days = 0
                 
@@ -238,6 +280,7 @@ def process_data(raw_data):
                 'propertyCount': property_count  # 실제 매물 수 추가
             })
     
+    print(f"최종 처리된 담당자 수: {len(manager_data)}")
     return manager_data
 
 @app.route('/health')
@@ -262,12 +305,35 @@ def get_data():
     """API 엔드포인트: 대시보드 데이터 반환"""
     try:
         print("=== API /api/data 호출됨 ===")
+        
+        # 환경 변수 상태 확인
+        service_account_info = os.getenv('GOOGLE_SERVICE_ACCOUNT_JSON')
+        print(f"환경 변수 GOOGLE_SERVICE_ACCOUNT_JSON 존재: {service_account_info is not None}")
+        print(f"스프레드시트 ID: {SPREADSHEET_ID}")
+        print(f"시트 이름: {SHEET_NAME}")
+        print(f"허용된 담당자: {ALLOWED_MANAGERS}")
+        
         raw_data = get_google_sheet_data()
         print(f"원시 데이터 개수: {len(raw_data)}")
         
         if not raw_data:
-            print("원시 데이터가 비어있습니다.")
-            return jsonify([])
+            print("원시 데이터가 비어있습니다. 구글 시트 연결 문제일 가능성이 높습니다.")
+            # 테스트 데이터 반환 (개발용)
+            test_data = [{
+                'name': '테스트 담당자',
+                'totalInquiries': 0,
+                'yesterdayInquiries': 0,
+                'totalDays': 0,
+                'properties': [],
+                'propertyCount': 0,
+                'error': '구글 시트 연결 실패'
+            }]
+            return jsonify(test_data)
+        
+        # 원시 데이터의 첫 번째 행 출력 (컬럼 구조 확인)
+        if len(raw_data) > 0:
+            print(f"첫 번째 행 컬럼: {list(raw_data[0].keys())}")
+            print(f"첫 번째 행 데이터 샘플: {raw_data[0]}")
         
         processed_data = process_data(raw_data)
         print(f"처리된 데이터 개수: {len(processed_data)}")
@@ -276,13 +342,21 @@ def get_data():
             print("처리된 담당자 목록:")
             for manager in processed_data:
                 print(f"  - {manager['name']}: 문의수 {manager['totalInquiries']}, 매물수 {manager['propertyCount']}")
+        else:
+            print("처리된 데이터가 없습니다. 필터링 조건을 확인하세요.")
         
         return jsonify(processed_data)
     except Exception as e:
         print(f"API 데이터 처리 오류: {e}")
         import traceback
         print(f"상세 오류: {traceback.format_exc()}")
-        return jsonify([])
+        # 오류 정보를 포함한 응답 반환
+        error_response = [{
+            'error': str(e),
+            'message': '데이터 처리 중 오류가 발생했습니다.',
+            'timestamp': datetime.now().isoformat()
+        }]
+        return jsonify(error_response)
 
 @app.route('/api/test')
 def test_connection():
