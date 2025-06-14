@@ -24,7 +24,7 @@ def get_google_sheet_data():
         scope = ['https://spreadsheets.google.com/feeds',
                 'https://www.googleapis.com/auth/drive']
         
-        # 환경 변수에서 JSON 키 읽기 (Vercel 배포용)
+        # 환경 변수에서 JSON 키 읽기 (Render 배포용)
         service_account_info = os.getenv('GOOGLE_SERVICE_ACCOUNT_JSON')
         print(f"환경 변수 GOOGLE_SERVICE_ACCOUNT_JSON 존재 여부: {service_account_info is not None}")
         
@@ -38,16 +38,39 @@ def get_google_sheet_data():
                 print("서비스 계정 인증 정보 생성 성공")
             except json.JSONDecodeError as e:
                 print(f"JSON 파싱 오류: {e}")
-                print(f"JSON 내용 길이: {len(service_account_info) if service_account_info else 0}")
-                print(f"JSON 시작 부분: {service_account_info[:100] if service_account_info else 'None'}")
                 return []
             except Exception as e:
                 print(f"서비스 계정 인증 정보 생성 오류: {e}")
                 return []
         else:
-            print("환경 변수 GOOGLE_SERVICE_ACCOUNT_JSON이 설정되지 않았습니다.")
-            print("Vercel 대시보드에서 환경 변수를 설정해주세요.")
-            return []
+            # 로컬 개발용 파일 사용 (fallback) - 더 안전한 경로 처리
+            possible_paths = [
+                '/etc/secrets/thetopone-fe6caa586b15.json',  # Render Secret Files
+                'service-account.json',  # 프로젝트 루트
+                'keys/service-account.json',  # keys 폴더
+                os.path.expanduser('~/google-service-account.json'),  # 홈 디렉토리
+                r'C:\Users\1\Desktop\구글서비스키\더탑원이스트 구글서비스키\thetopone-fe6caa586b15.json'  # 기존 경로 (fallback)
+            ]
+            
+            credentials = None
+            for local_file in possible_paths:
+                print(f"로컬 파일 시도: {local_file}")
+                if os.path.exists(local_file):
+                    try:
+                        credentials = Credentials.from_service_account_file(local_file, scopes=scope)
+                        print(f"로컬 파일에서 인증 정보 생성 성공: {local_file}")
+                        break
+                    except Exception as e:
+                        print(f"파일 {local_file} 로드 실패: {e}")
+                        continue
+            
+            if not credentials:
+                print("Google 서비스 계정 키를 찾을 수 없습니다.")
+                print("다음 중 하나를 설정하세요:")
+                print("1. 환경 변수 GOOGLE_SERVICE_ACCOUNT_JSON")
+                print("2. 프로젝트 루트에 service-account.json 파일")
+                print("3. keys/service-account.json 파일")
+                return []
         
         # 구글 시트 클라이언트 생성
         print("구글 시트 클라이언트 생성 중...")
@@ -402,8 +425,4 @@ if __name__ == '__main__':
     if debug_mode:
         print("브라우저에서 http://localhost:5000 으로 접속하세요.")
     
-    app.run(debug=debug_mode, host='0.0.0.0', port=port)
-
-# Vercel을 위한 WSGI 애플리케이션 노출
-# Vercel은 이 변수를 찾아서 서버리스 함수로 실행합니다
-application = app 
+    app.run(debug=debug_mode, host='0.0.0.0', port=port) 
