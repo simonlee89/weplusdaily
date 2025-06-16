@@ -13,7 +13,7 @@ SPREADSHEET_ID = os.getenv('GOOGLE_SPREADSHEET_ID', '1I0Vp01nTB2PnXK4QOY-kIdu5Jb
 SHEET_NAME = '최종데이터'
 
 # 필터링할 담당자 목록
-ALLOWED_MANAGERS = ['김찬', '손기현', '정지원', '김상현', '이예인', '김동엽', '한대웅', '이지현']
+ALLOWED_MANAGERS = ['김찬', '손기현', '정지원', '김상현', '이예인', '김동엽', '한대웅', '이지현', '강태석']
 
 def get_google_sheet_data():
     """구글 시트에서 데이터를 가져오는 함수"""
